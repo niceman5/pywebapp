@@ -1,12 +1,18 @@
-from flask import Flask, url_for
+from flask import Flask, url_for, request, response
 app = Flask(__name__)
+
+
+@app.route('/')
+def idnex():
+    username = request.cookies.get('username')
+    return 'Hello Flask!!' + username
 
 @app.route('/hello/')
 def hello():
     return 'Hello Flask!!'
 
 @app.route('/profile/<username>')
-def get_profile(username):
+def get_profile(username):    
     return 'profile : ' + username
 
 

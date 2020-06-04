@@ -1,0 +1,40 @@
+hello {{ name }} !!!!<br>
+
+
+{% for i in range(5) %}
+{{ name }} &nbsp; {{loop.index}} &nbsp; {{loop.revindex}} &nbsp; {{loop.first}} &nbsp; {{loop.last}} &nbsp; {{loop.length}} &nbsp; {{loop.cycle('1','2','3')}} &nbsp;</br>
+{% endfor %}
+
+{#  
+    {{ 
+    이거는 에러남
+    에러 안나려면 '{{'
+#} 
+
+{}
+
+
+{#
+    이거는 주석임.....
+
+    html에 안들어감
+    {% raw %}는 이스케이프 .,.....그냉 그대로 찍어준다.
+#}
+
+{% raw %}
+    {% for i in range(5) %}
+    {{ name }} &nbsp;
+    {% endfor %}
+{% endraw %}
+
+{% macro input(name, value='', type='text', size=20) -%}
+<input type="{{type}}" name="{{name}}" value="{{value}}" szie="{{size}}" />
+{%-endmacro%}
+
+{#
+    매크로가 설정된  html파일을 load
+    {% from 'input.heml' import input %}
+#}
+
+<p>{{input('username')}}</p>
+<p>{{input('password', type='password')}}</p>
