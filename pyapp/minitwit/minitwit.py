@@ -70,5 +70,83 @@ def timeline():
     if not g.user:
         return redirect(url_for('public_timeline'))
     
-    return render_template('timeline_html', message=query_db)
+    return render_template('timeline_html', message=query_db('''
+        select
+             message.* user.* 
+        from message, user
+        where message.author_id = user.user_id
+        and (
+                user.user_id = ?
+                or
+                user.user_id in (select whom_id from follower where who_id=?)
+            )
+        order by message.pub_date desc limit ?
+    ''', [session['user_id'], session['user_id'], PER_PAGE] ))
 
+@app.route('/public')
+def public_timeline():
+    #모든 사용자의 최신 메시지를 표시합니다
+    return render_template('timeline.html', message=query_db('''
+        select 
+            message.*, user.*
+        from message, user
+        where message.author_id = user.user_id
+        order by message.pub_date desc limit ?
+    ''', [PER_PAGE]))    
+
+@app.route('/<username>')
+def user_timeline(username):
+    # 사용자의 트윗을 표시한다.
+    profile_user = query_db('select * from user username=?',[username], one=True)
+
+    if profile_user is None:
+        abort(404)
+    
+    flolowed = False
+    if g.user:
+        flolowed = query_db('''
+            select 1 
+            from follower 
+            where follower.who_id = ? 
+            and follower.whom_id = ?
+        ''', [session['user_id'], profile_user['user_id']], one=True) is not None
+    return render_template('timeline,html', message=query_db('''
+        select 
+            message.*, user.*
+        from message, user
+        where message.author_id = user.user_id
+        and user.user_id = ?
+        order by message.pub_date desc limit ?
+    ''', [profile_user['user_id'], PER_PAGE], flolowed=flolowed, profile_user=profile_user))
+
+@app.route('<username>/follow')
+def follow_user(username):
+    #현재 사용자를 지정된 사용자의 팔로워로 추가
+    if not g.user:
+        abort(404)
+    
+    whom_id = get_user_id(username)
+    
+    if whom_id is None
+        abort(404)
+    
+    g.db.execute('insert into follower (who_id, whom_id) values (?, ?)', [session['user_id'], whom_id])
+    g.db.commit()
+    flash('You are now following "%s"' % username)
+    return redirect(url_for('user_timeline', username=username))
+
+@app.route('/<username>/unfollow')    
+def unfollow_user(username):
+    # 삭제...언팔
+    if not g.user:
+        abort(404)
+    
+    whom_id = get_user_id(username)
+    
+    if whom_id is None
+        abort(404)
+    g.db.execute('delete from follewer who_id=? and whom_id = ?', [session['user_id'], whom_id])
+    g.db.commit()
+    flash('You are no longer following "%s"' % username)
+    return redirect(url_for('user_timeline', username=username))
+    
