@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import with_statement
+import sys
 import time
 from sqlite3 import dbapi2 as sqlite3
 from hashlib import md5
@@ -9,8 +10,8 @@ from flask import Flask, request, session, url_for, redirect, render_template, a
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # configuration
-# DATABASE = 'minitwit.db'        #경로표시하면 위치 지정 가능
-DATABASE = 'C:\\00.Dev\\Study\\pywebapp\\pyapp\\minitwit\\minitwit2.db'
+DATABASE = 'minitwit.db'        #경로표시하면 위치 지정 가능
+# DATABASE = 'C:\\00.Dev\\Study\\pywebapp\\pyapp\\minitwit\\minitwit2.db'
 PER_PAGE = 30
 DEBUG = True
 SECRET_KEY = 'development key'
@@ -71,9 +72,10 @@ def timeline():
     if not g.user:
         return redirect(url_for('public_timeline'))
     
-    return render_template('timeline_html', message=query_db('''
+    return render_template('timeline.html', message=query_db('''
         select
-             message.* user.* 
+            message.*
+        ,   user.* 
         from message, user
         where message.author_id = user.user_id
         and (
@@ -87,18 +89,21 @@ def timeline():
 @app.route('/public')
 def public_timeline():
     #모든 사용자의 최신 메시지를 표시합니다
+    print('call public_timeline()')
+    print(PER_PAGE)
     return render_template('timeline.html', message=query_db('''
         select 
-            message.*, user.*
+            message.*
+        ,   user.*
         from message, user
         where message.author_id = user.user_id
         order by message.pub_date desc limit ?
-    ''', [PER_PAGE]))    
+    ''', [PER_PAGE]))
 
 @app.route('/<username>')
 def user_timeline(username):
     # 사용자의 트윗을 표시한다.
-    profile_user = query_db('select * from user username=?',[username], one=True)
+    profile_user = query_db('select * from user where username=?',[username], one=True)
 
     if profile_user is None:
         abort(404)
@@ -189,6 +194,7 @@ def register():
     # 사용자 등록
     if g.user:
         return redirect(url_for('timeline'))
+
     error = None
     if request.method == 'POST':
         if not request.form['username']:
@@ -212,7 +218,8 @@ def register():
 def logout():
     flash('you were logged out')
     session.pop('user_id', None)
-    return render_template(url_for('public_timeline'))
+    # print('log ', url_for('public_timeline'))
+    return redirect(url_for('public_timeline'))
 
 app.jinja_env.filters['datetimeformat'] = format_datetime
 app.jinja_env.filters['gravatar'] = gravatar_url
