@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+
 {% block title %}
   {% if request.endpoint == 'public_timeline' %}
     Public Timeline
@@ -8,6 +9,7 @@
     My Timeline
   {% endif %}
 {% endblock %}
+
 {% block body %}
   <h2>{{ self.title() }}</h2>
   {% if g.user %}

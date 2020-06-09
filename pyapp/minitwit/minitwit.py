@@ -108,22 +108,35 @@ def user_timeline(username):
     if profile_user is None:
         abort(404)
     
-    flolowed = False
+    followed = False
     if g.user:
-        flolowed = query_db('''
+        followed = query_db('''
             select 1 
             from follower 
             where follower.who_id = ? 
             and follower.whom_id = ?
         ''', [session['user_id'], profile_user['user_id']], one=True) is not None
-    return render_template('timeline,html', message=query_db('''
+
+    message=query_db('''
         select 
             message.*, user.*
         from message, user
         where message.author_id = user.user_id
         and user.user_id = ?
         order by message.pub_date desc limit ?
-    ''', [profile_user['user_id'], PER_PAGE], flolowed=flolowed, profile_user=profile_user))
+    ''', [profile_user['user_id'], PER_PAGE])
+    
+    print(type(message))
+    print(message[0])
+    print(type(profile_user))
+    return render_template('timeline.html', message=query_db('''
+        select 
+            message.*, user.*
+        from message, user
+        where message.author_id = user.user_id
+        and user.user_id = ?
+        order by message.pub_date desc limit ?
+    ''', [profile_user['user_id'], PER_PAGE]), followed=followed, profile_user=profile_user)
 
 @app.route('/<username>/follow')
 def follow_user(username):
