@@ -49,7 +49,7 @@ def format_datetime(timestamp):
 
 def gravatar_url(email, size=80):
     # return 
-    return 'http://www.gravatar.com/avatar%s?d=identicon=%d'%(md5(email.strip().lower().encode('utf-8')).hexdigest(),size)
+    return 'http://www.gravatar.com/avatar/%s?d=identicon&s=%d'%(md5(email.strip().lower().encode('utf-8')).hexdigest(),size)
 
 @app.before_request
 def before_request():
@@ -72,7 +72,7 @@ def timeline():
     if not g.user:
         return redirect(url_for('public_timeline'))
     
-    return render_template('timeline.html', message=query_db('''
+    return render_template('timeline.html', messages=query_db('''
         select
             message.*
         ,   user.* 
@@ -91,52 +91,33 @@ def public_timeline():
     #모든 사용자의 최신 메시지를 표시합니다
     print('call public_timeline()')
     print(PER_PAGE)
-    return render_template('timeline.html', message=query_db('''
-        select 
-            message.*
-        ,   user.*
-        from message, user
-        where message.author_id = user.user_id
-        order by message.pub_date desc limit ?
-    ''', [PER_PAGE]))
+    return render_template('timeline.html', messages=query_db('''
+        select message.*, user.* from message, user 
+        where message.author_id = user.user_id 
+        order by message.pub_date desc limit ?''', [PER_PAGE]))
 
 @app.route('/<username>')
 def user_timeline(username):
     # 사용자의 트윗을 표시한다.
-    profile_user = query_db('select * from user where username=?',[username], one=True)
+    profile_user = query_db('select * from user where username = ?',[username], one=True)
 
     if profile_user is None:
         abort(404)
     
     followed = False
     if g.user:
-        followed = query_db('''
-            select 1 
-            from follower 
-            where follower.who_id = ? 
-            and follower.whom_id = ?
-        ''', [session['user_id'], profile_user['user_id']], one=True) is not None
+        followed = query_db('''select 1 from 
+            follower where follower.who_id = ? and follower.whom_id = ?''',
+            [session['user_id'], profile_user['user_id']],
+            one=True) is not None
 
-    message=query_db('''
-        select 
-            message.*, user.*
-        from message, user
-        where message.author_id = user.user_id
-        and user.user_id = ?
-        order by message.pub_date desc limit ?
-    ''', [profile_user['user_id'], PER_PAGE])
-    
-    print(type(message))
-    print(message[0])
-    print(type(profile_user))
-    return render_template('timeline.html', message=query_db('''
-        select 
-            message.*, user.*
-        from message, user
-        where message.author_id = user.user_id
-        and user.user_id = ?
-        order by message.pub_date desc limit ?
-    ''', [profile_user['user_id'], PER_PAGE]), followed=followed, profile_user=profile_user)
+    return render_template('timeline.html', messages=query_db('''
+            select message.*, user.* 
+            from message, user 
+            where user.user_id = message.author_id and user.user_id = ?
+            order by message.pub_date desc limit ?''',
+            [profile_user['user_id'], PER_PAGE]), followed=followed,
+            profile_user=profile_user)
 
 @app.route('/<username>/follow')
 def follow_user(username):
@@ -239,5 +220,4 @@ app.jinja_env.filters['gravatar'] = gravatar_url
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
-    
+    app.run(debug=True)    
